@@ -2,228 +2,243 @@ name: "Build Rust Projects with Cross"
 author: "Dave Rolsky <autarch@urth.org>"
 
 branding:
-  icon: home
-  color: gray-dark
+    icon: home
+    color: gray-dark
 
 description: |
-  Cross compile your Rust projects with cross (https://github.com/cross-rs/cross).
+    Cross compile your Rust projects with cross (https://github.com/cross-rs/cross).
 
 inputs:
-  target:
-    description: The target platform
-    required: true
+    target:
+        description: The target platform
+        required: true
 
-  command:
-    description: |
-      The commands to run. Use "both" to run both "build" and "test".
-    default: build
+    command:
+        description: |
+            The commands to run. Use "both" to run both "build" and "test".
+        default: build
 
-  toolchain:
-    description: |
-      The target toolchain to use.
-    default: stable
+    toolchain:
+        description: |
+            The target toolchain to use.
+        default: stable
 
-  working-directory:
-    description: The working directory for each step
-    default: "."
+    toolchain-action-rev:
+        description: |
+            The revision of the dtolnay/rust-toolchain action to use. Defaults to "master".
+            Note that this does not set the toolchain or rust version, but merely allows
+            for pinning the Github Action version to use.
+        default: master
 
-  GITHUB_TOKEN:
-    description: |
-      A GitHub token, available in the secrets.GITHUB_TOKEN working-directory variable.
-    default: ${{ github.token }}
+    working-directory:
+        description: The working directory for each step
+        default: "."
 
-  args:
-    description: |
-      The arguments to be passed to cross or cargo when building, as a
-      space-separated string.
-    default: ""
+    GITHUB_TOKEN:
+        description: |
+            A GitHub token, available in the secrets.GITHUB_TOKEN working-directory variable.
+        default: ${{ github.token }}
 
-  strip:
-    description: Strip the compiled binary
-    default: false
+    args:
+        description: |
+            The arguments to be passed to cross or cargo when building, as a
+            space-separated string.
+        default: ""
 
-  cross-version:
-    description: |
-      The version of cross to use. If not specified, then the latest version
-      will be used.
+    strip:
+        description: Strip the compiled binary
+        default: false
 
-  cache-cross-binary:
-    description: |
-      Cache the cross binary if one is installed. This is primarily for use in
-      tests of this action.
-    default: true
+    cross-version:
+        description: |
+            The version of cross to use. If not specified, then the latest version
+            will be used.
 
-  force-use-cross:
-    description: |
-      If this is true, the action will use cross even for targets where it is not needed.
-    default: false
+    cache-cross-binary:
+        description: |
+            Cache the cross binary if one is installed. This is primarily for use in
+            tests of this action.
+        default: false
 
-  use-rust-cache:
-    description: |
-      Use `Swatinem/rust-cache@v2`. Defaults to true.
-    default: true
+    cache-action-rev:
+        description: The revision of the actions/cache action to use for caching the cross binary. Defaults to v4.
+        default: v4
 
-  rust-cache-parameters:
-    description: |
-      A JSON string containing parameters to pass to `Swatinem/rust-cache@v2`. You can use the
-      `toJSON()` function in your action to make passing this easier.
-    default: "{}"
+    force-use-cross:
+        description: |
+            If this is true, the action will use cross even for targets where it is not needed.
+        default: false
+
+    use-rust-cache:
+        description: |
+            Use `Swatinem/rust-cache`. Defaults to true.
+        default: true
+
+    rust-cache-parameters:
+        description: |
+            A JSON string containing parameters to pass to `Swatinem/rust-cache@v2`. You can use the
+            `toJSON()` function in your action to make passing this easier.
+        default: "{}"
+
+    rust-cache-action-rev:
+        description: The revision of the Swatinem/rust-cache action to use. Defaults to v2.
+        default: v2
 
 runs:
-  using: composite
-  steps:
-    - name: Show inputs
-      shell: bash
-      run: |
-        echo '${{ toJSON(inputs) }}'
+    using: composite
+    steps:
+        - name: Show inputs
+          shell: bash
+          run: |
+              echo '${{ toJSON(inputs) }}'
 
-    - name: Add this action's path to PATH
-      shell: bash
-      run: echo "${{ github.action_path }}" >> $GITHUB_PATH
+        - name: Add this action's path to PATH
+          shell: bash
+          run: echo "${{ github.action_path }}" >> $GITHUB_PATH
 
-    - name: Validate inputs
-      shell: bash
-      run: |
-        "${{ github.action_path }}"/validate-inputs.py "${{ github.workspace }}"
-      env:
-        INPUTS_target: ${{ inputs.target }}
-        INPUTS_command: ${{ inputs.command }}
-        INPUTS_toolchain: ${{ inputs.toolchain }}
-        INPUTS_working_directory: ${{ inputs.working-directory }}
-        INPUTS_strip: ${{ inputs.strip }}
-        INPUTS_cache_cross_binary: ${{ inputs.cache-cross-binary }}
-        INPUTS_force_use_cross: ${{ inputs.force-use-cross }}
-        INPUTS_use_rust_cache: ${{ inputs.use-rust-cache }}
-        INPUTS_rust_cache_parameters: ${{ inputs.rust-cache-parameters }}
+        - name: Validate inputs
+          shell: bash
+          run: |
+              "${{ github.action_path }}"/validate-inputs.py "${{ github.workspace }}"
+          env:
+              INPUTS_target: ${{ inputs.target }}
+              INPUTS_command: ${{ inputs.command }}
+              INPUTS_toolchain: ${{ inputs.toolchain }}
+              INPUTS_working_directory: ${{ inputs.working-directory }}
+              INPUTS_strip: ${{ inputs.strip }}
+              INPUTS_cache_cross_binary: ${{ inputs.cache-cross-binary }}
+              INPUTS_force_use_cross: ${{ inputs.force-use-cross }}
+              INPUTS_use_rust_cache: ${{ inputs.use-rust-cache }}
+              INPUTS_rust_cache_parameters: ${{ inputs.rust-cache-parameters }}
 
-    - name: Determine whether we need to cross-compile
-      id: determine-cross-compile
-      shell: bash
-      run: set-cross-compile.py ${{ inputs.target }} ${{ inputs.force-use-cross }}
+        - name: Determine whether we need to cross-compile
+          id: determine-cross-compile
+          shell: bash
+          run: set-cross-compile.py ${{ inputs.target }} ${{ inputs.force-use-cross }}
 
-    - name: Install toolchain
-      uses: dtolnay/rust-toolchain@master
-      with:
-        targets: ${{ inputs.target }}
-        toolchain: ${{ inputs.toolchain }}
+        - name: Install toolchain
+          uses: dtolnay/rust-toolchain@${{ inputs.toolchain-action-rev }}
+          with:
+              targets: ${{ inputs.target }}
+              toolchain: ${{ inputs.toolchain }}
 
-    - name: Install qemu-user emulator binaries if cross-compiling on arm64 host
-      shell: bash
-      run: |
-        set -e
-        set -x
+        - name: Install qemu-user emulator binaries if cross-compiling on arm64 host
+          shell: bash
+          run: |
+              set -e
+              set -x
 
-        docker run --privileged --rm tonistiigi/binfmt --install all
-      if: steps.determine-cross-compile.outputs.needs-cross == 'true' && runner.os == 'Linux' && contains(runner.arch, 'ARM')
+              docker run --privileged --rm tonistiigi/binfmt --install all
+          if: steps.determine-cross-compile.outputs.needs-cross == 'true' && runner.os == 'Linux' && contains(runner.arch, 'ARM')
 
-    - name: Determine cross version
-      id: determine-cross-version
-      shell: bash
-      run: determine-cross-version.sh "${{ inputs.cross-version }}"
-      env:
-        GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
-      if: steps.determine-cross-compile.outputs.needs-cross == 'true'
+        - name: Determine cross version
+          id: determine-cross-version
+          shell: bash
+          run: determine-cross-version.sh "${{ inputs.cross-version }}"
+          env:
+              GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
+          if: steps.determine-cross-compile.outputs.needs-cross == 'true'
 
-    # We need to access this in both this YAML config and shell scripts. It
-    # doesn't seem like using ${{ env.RUNNER_TEMP }} works in the YAML config.
-    - name: Set directory for installing cross
-      id: set-cross-dir
-      shell: bash
-      run: set-cross-dir.sh
-      if: steps.determine-cross-compile.outputs.needs-cross == 'true'
+        # We need to access this in both this YAML config and shell scripts. It
+        # doesn't seem like using ${{ env.RUNNER_TEMP }} works in the YAML config.
+        - name: Set directory for installing cross
+          id: set-cross-dir
+          shell: bash
+          run: set-cross-dir.sh
+          if: steps.determine-cross-compile.outputs.needs-cross == 'true'
 
-    - name: Cache cross
-      id: cache-cross
-      uses: actions/cache@v4
-      with:
-        path: ${{ steps.set-cross-dir.outputs.cross-dir }}/cross
-        key: ${{ runner.os }}-${{ runner.arch }}-${{ steps.determine-cross-version.outputs.cross-version }}
-      if: steps.determine-cross-compile.outputs.needs-cross == 'true' && inputs.cache-cross-binary == 'true'
+        - name: Cache cross
+          id: cache-cross
+          uses: actions/cache@${{ inputs.cache-action-rev }}
+          with:
+              path: ${{ steps.set-cross-dir.outputs.cross-dir }}/cross
+              key: ${{ runner.os }}-${{ runner.arch }}-${{ steps.determine-cross-version.outputs.cross-version }}
+          if: steps.determine-cross-compile.outputs.needs-cross == 'true' && inputs.cache-cross-binary == 'true'
 
-    - name: Install cross if cross-compiling (*nix)
-      shell: bash
-      run: install-cross-nix.sh ${{ steps.set-cross-dir.outputs.cross-dir }} ${{ steps.determine-cross-version.outputs.cross-version }}
-      if: steps.determine-cross-compile.outputs.needs-cross == 'true' && steps.cache-cross.outputs.cache-hit != 'true'
-      env:
-        GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
+        - name: Install cross if cross-compiling (*nix)
+          shell: bash
+          run: install-cross-nix.sh ${{ steps.set-cross-dir.outputs.cross-dir }} ${{ steps.determine-cross-version.outputs.cross-version }}
+          if: steps.determine-cross-compile.outputs.needs-cross == 'true' && steps.cache-cross.outputs.cache-hit != 'true'
+          env:
+              GITHUB_TOKEN: ${{ inputs.GITHUB_TOKEN }}
 
-    - name: Install musl-tools on Linux if target includes "musl"
-      shell: bash
-      run: |
-        if dpkg -l musl-tools | grep -q "^ii\s*musl-tools"; then
-            exit 0
-        fi
-        sudo apt-get update --yes && \
-            sudo apt-get install --yes musl-tools
-      if: steps.determine-cross-compile.outputs.needs-cross != 'true' && contains(inputs.target, 'musl')
+        - name: Install musl-tools on Linux if target includes "musl"
+          shell: bash
+          run: |
+              if dpkg -l musl-tools | grep -q "^ii\s*musl-tools"; then
+                  exit 0
+              fi
+              sudo apt-get update --yes && \
+                  sudo apt-get install --yes musl-tools
+          if: steps.determine-cross-compile.outputs.needs-cross != 'true' && contains(inputs.target, 'musl')
 
-    - name: Set build command
-      id: set-build-command
-      shell: bash
-      run: set-build-command.sh ${{ steps.set-cross-dir.outputs.cross-dir }}
+        - name: Set build command
+          id: set-build-command
+          shell: bash
+          run: set-build-command.sh ${{ steps.set-cross-dir.outputs.cross-dir }}
 
-    - name: Determine which cargo commands to run
-      id: determine-cargo-commands
-      shell: bash
-      run: determine-cargo-commands.sh ${{ inputs.command }}
+        - name: Determine which cargo commands to run
+          id: determine-cargo-commands
+          shell: bash
+          run: determine-cargo-commands.sh ${{ inputs.command }}
 
-    - name: Parse `rust-cache-parameters` and set inputs for `Swatinem/rust-cache@v2`
-      id: parse-rust-cache-parameters
-      shell: bash
-      run: |
-        set -e
-        set -x
-        set -o pipefail
-        OS_VERSION=""
-        if [ -x /usr/bin/lsb_release ]; then
-            # This will be something like "Ubuntu 22.04.5 LTS"
-            OS_VERSION="$( lsb_release --short --description )"
-        fi
-        # This will get the inputs JSON from the `RUST_CACHE_PARAMETERS` env var. This avoids
-        # any string interpolation issues, since the inputs will contain quotes.
-        parse-and-set-rust-cache-parameters.py "${{ inputs.target }}" "${{ steps.set-build-command.outputs.build-command }}" "$OS_VERSION"
-      env:
-        RUST_CACHE_PARAMETERS: ${{ inputs.rust-cache-parameters }}
-      if: inputs.use-rust-cache == 'true'
+        - name: Parse `rust-cache-parameters` and set inputs for `Swatinem/rust-cache@v2`
+          id: parse-rust-cache-parameters
+          shell: bash
+          run: |
+              set -e
+              set -x
+              set -o pipefail
+              OS_VERSION=""
+              if [ -x /usr/bin/lsb_release ]; then
+                  # This will be something like "Ubuntu 22.04.5 LTS"
+                  OS_VERSION="$( lsb_release --short --description )"
+              fi
+              # This will get the inputs JSON from the `RUST_CACHE_PARAMETERS` env var. This avoids
+              # any string interpolation issues, since the inputs will contain quotes.
+              parse-and-set-rust-cache-parameters.py "${{ inputs.target }}" "${{ steps.set-build-command.outputs.build-command }}" "$OS_VERSION"
+          env:
+              RUST_CACHE_PARAMETERS: ${{ inputs.rust-cache-parameters }}
+          if: inputs.use-rust-cache == 'true'
 
-    - name: Cache cargo & target directories
-      uses: Swatinem/rust-cache@v2
-      with: ${{ steps.parse-rust-cache-parameters.outputs }}
-      if: inputs.use-rust-cache == 'true'
+        - name: Cache cargo & target directories
+          uses: Swatinem/rust-cache@${{ inputs.rust-cache-action-rev }}
+          with: ${{ steps.parse-rust-cache-parameters.outputs }}
+          if: inputs.use-rust-cache == 'true'
 
-    - name: Run cargo test
-      working-directory: ${{ inputs.working-directory }}
-      # We want to run in Powershell on Windows to make sure we compile in a native Windows
-      # environment. Some things won't compile properly under msys, notably OpenSSL, which is
-      # compiled locally when using the `openssl` crate with the `vendored` feature.
-      shell: ${{ runner.os == 'Windows' && 'powershell' || 'bash' }}
-      run: |
-        ${{ steps.set-build-command.outputs.build-command }} test --target ${{ inputs.target }} ${{ inputs.args }}
-      if: steps.determine-cargo-commands.outputs.test == 'true'
+        - name: Run cargo test
+          working-directory: ${{ inputs.working-directory }}
+          # We want to run in Powershell on Windows to make sure we compile in a native Windows
+          # environment. Some things won't compile properly under msys, notably OpenSSL, which is
+          # compiled locally when using the `openssl` crate with the `vendored` feature.
+          shell: ${{ runner.os == 'Windows' && 'powershell' || 'bash' }}
+          run: |
+              ${{ steps.set-build-command.outputs.build-command }} test --target ${{ inputs.target }} ${{ inputs.args }}
+          if: steps.determine-cargo-commands.outputs.test == 'true'
 
-    - name: Run cargo build
-      working-directory: ${{ inputs.working-directory }}
-      # We want to run in Powershell on Windows to make sure we compile in a native Windows
-      # environment. Some things won't compile properly under msys, notably OpenSSL, which is
-      # compiled locally when using the `openssl` crate with the `vendored` feature.
-      shell: ${{ runner.os == 'Windows' && 'powershell' || 'bash' }}
-      run: |
-        ${{ steps.set-build-command.outputs.build-command }} build --target ${{ inputs.target }} ${{ inputs.args }}
-      if: steps.determine-cargo-commands.outputs.build == 'true'
+        - name: Run cargo build
+          working-directory: ${{ inputs.working-directory }}
+          # We want to run in Powershell on Windows to make sure we compile in a native Windows
+          # environment. Some things won't compile properly under msys, notably OpenSSL, which is
+          # compiled locally when using the `openssl` crate with the `vendored` feature.
+          shell: ${{ runner.os == 'Windows' && 'powershell' || 'bash' }}
+          run: |
+              ${{ steps.set-build-command.outputs.build-command }} build --target ${{ inputs.target }} ${{ inputs.args }}
+          if: steps.determine-cargo-commands.outputs.build == 'true'
 
-    - name: Run cargo ${{ steps.determine-cargo-commands.outputs.command }}
-      working-directory: ${{ inputs.working-directory }}
-      # We want to run in Powershell on Windows to make sure we compile in a native Windows
-      # environment. Some things won't compile properly under msys, notably OpenSSL, which is
-      # compiled locally when using the `openssl` crate with the `vendored` feature.
-      shell: ${{ runner.os == 'Windows' && 'powershell' || 'bash' }}
-      run: |
-        ${{ steps.set-build-command.outputs.build-command }} ${{ steps.determine-cargo-commands.outputs.command }} --target ${{ inputs.target }} ${{ inputs.args }}
-      if: steps.determine-cargo-commands.outputs.command != ''
+        - name: Run cargo ${{ steps.determine-cargo-commands.outputs.command }}
+          working-directory: ${{ inputs.working-directory }}
+          # We want to run in Powershell on Windows to make sure we compile in a native Windows
+          # environment. Some things won't compile properly under msys, notably OpenSSL, which is
+          # compiled locally when using the `openssl` crate with the `vendored` feature.
+          shell: ${{ runner.os == 'Windows' && 'powershell' || 'bash' }}
+          run: |
+              ${{ steps.set-build-command.outputs.build-command }} ${{ steps.determine-cargo-commands.outputs.command }} --target ${{ inputs.target }} ${{ inputs.args }}
+          if: steps.determine-cargo-commands.outputs.command != ''
 
-    - name: Strip binary
-      working-directory: ${{ inputs.working-directory }}
-      shell: bash
-      run: strip-binary.sh ${{ inputs.target }}
-      # strip doesn't work with cross-arch binaries on Linux or Windows.
-      if: inputs.command != 'test' && inputs.strip == 'true' && steps.determine-cross-compile.outputs.needs-cross == 'false' && inputs.target != 'aarch64-pc-windows-msvc'
+        - name: Strip binary
+          working-directory: ${{ inputs.working-directory }}
+          shell: bash
+          run: strip-binary.sh ${{ inputs.target }}
+          # strip doesn't work with cross-arch binaries on Linux or Windows.
+          if: inputs.command != 'test' && inputs.strip == 'true' && steps.determine-cross-compile.outputs.needs-cross == 'false' && inputs.target != 'aarch64-pc-windows-msvc'
